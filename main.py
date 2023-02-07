@@ -1,3 +1,4 @@
+import itertools
 import random
 from openpyxl import Workbook
 
@@ -21,6 +22,10 @@ QUALITY = ['Трагический', 'Сатирический', 'Комичес
 
 Y_N = ['Да', 'Нет', 'Неизвестно']  # Основан ли на реальных событиях
 
+PAGES = range(25, 2000)
+
+YEAR = range(1920, 2023)
+
 # Открываем excel файл
 workbook = Workbook()
 sheet = workbook.active
@@ -33,7 +38,7 @@ sheet["D1"] = "Объем"
 sheet["E1"] = "Год выпуска"
 sheet["F1"] = "Сюжетные схемы"
 sheet["G1"] = "Ведущее эстетическое качество"
-sheet["H1"] = "На реальных собыытиях"
+sheet["H1"] = "На реальных событиях"
 
 # Открываем файлы со словами
 adjectives = open('adj.txt', 'r')
@@ -47,17 +52,25 @@ def code_gen():
         # Возвращаем строку из 8 цифр, недостающее количество заполняем нулями
         yield f'{str(i).rjust(8, "0")}'
         i += 1
-gen = code_gen()
 
+def params_gen():
+    combinations = list(itertools.product(PAGES, YEAR, PLOT_SCHEMES , QUALITY, Y_N))[:AMOUNT_OF_ROWS]
+    random.shuffle(combinations)
+    for c in combinations:
+        yield c
+        
+
+gen = code_gen()
+par_gen = params_gen()
 
 # Цикл, создаёт строчку в таблице
-for i in range(AMOUNT_OF_ROWS):
+for i in range(2, AMOUNT_OF_ROWS + 2):
     # Считыаем по одной строчки из файла с прилагательными
     current_adj = adjectives.readline().lower().strip()
     # Считыаем по одной строчки из файла с существительными
     current_noun = nouns.readline().lower().strip()
 
-    # Проверяем не кончились ли слова в файах. Если кончились, то открываем файлы сначала
+    # Проверяем не кончились ли слова в файлах. Если кончились, то открываем файлы сначала
     if not current_adj:
         adjectives.close()
         adjectives = open('adj.txt', 'r')
@@ -68,15 +81,19 @@ for i in range(AMOUNT_OF_ROWS):
 
     # Случайно выбираем значения, заносим их в строчку
     # random.choice берёт случайный элемент из массива
-    sheet[f'A{i+2}'] = f'{random.choice(START)} {random.choice(START_2)} the {current_adj} {current_noun}'
-    sheet[f'B{i+2}'] = gen.__next__() # получаем следующий номер товара (генераторы в Python работают через __next__)
-    # Случайное число от 10 до 30
-    sheet[f'C{i+2}'] = f'{random.randint(10, 30)}$'
-    sheet[f'D{i+2}'] = f'{random.randint(25, 2_000)}'
-    sheet[f'E{i+2}'] = f'{random.randint(1920, 2023)}'
-    sheet[f'F{i+2}'] = f'{random.choice(PLOT_SCHEMES)}'
-    sheet[f'G{i+2}'] = f'{random.choice(QUALITY)}'
-    sheet[f'H{i+2}'] = f'{random.choice(Y_N)}'
+    # random.randint(a,b) возвращает случайное целое число от a до b
+    sheet[f'A{i}'] = f'{random.choice(START)} {random.choice(START_2)} the {current_adj} {current_noun}'
+    
+    # получаем следующий номер товара (генераторы в Python работают через __next__)
+    sheet[f'B{i}'] = gen.__next__()
+    sheet[f'C{i}'] = f'{random.randint(10, 30)}$'
+    
+    current_comb = par_gen.__next__()
+    sheet[f'D{i}'] = current_comb[0]
+    sheet[f'E{i}'] = current_comb[1]
+    sheet[f'F{i}'] = current_comb[2]
+    sheet[f'G{i}'] = current_comb[3]
+    sheet[f'H{i}'] = current_comb[4]
 
 # Завершаем работу программы
 workbook.save(filename="table1.xlsx")  # Сохраняем excel файл
